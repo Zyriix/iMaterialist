@@ -56,9 +56,9 @@ class PostProcessor(nn.Module):
         """
         class_logits, cat_logits, box_regression = x
         class_prob = F.softmax(class_logits, -1)
-        print(f"logits:{cat_logits}")
-        cat_prob = F.sigmoid(cat_logits)
-        print(cat_prob)
+        # print(f"logits:{cat_logits}")
+        cat_prob = torch.sigmoid(cat_logits)
+        # print(cat_prob)
         # TODO think about a representation of batch of boxes
         image_shapes = [box.size for box in boxes]
         boxes_per_image = [len(box) for box in boxes]

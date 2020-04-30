@@ -12,11 +12,12 @@ class F1_scorer():
             f1_threshold = 0.5
             gt_labels = target.get_field('labels')
             gt_masks = np.array([(x>0).numpy() for x in target.get_field("masks").instances ])
-
+            gt_categories = target.get_field("categories").numpy() >0
             # print(gt_labels.shape,gt_masks.shape)
                 
             scores = rs.get_field('scores').cpu().numpy()
             labels = rs.get_field('labels').cpu().numpy()
+            cat_scores = rs.get_field('cat_scores').cpu().numpy()
             # print(scores.shape,labels.shape)
             
             mask_threshold =  0.5
@@ -30,20 +31,44 @@ class F1_scorer():
             scores = scores[idx]
             labels = labels[idx]
             masks = masks[idx]
+            cat_scores = cat_scores[idx]
+            cat_scores=cat_scores>0.5
             rs = []
-            for gt,gt_label in zip(gt_masks,gt_labels):
+            
+            for gt,gt_label,gt_catgory in zip(gt_masks,gt_labels,gt_categories):
+                # print(gt_catgory.shape,gt_categories.shape)
+
                 maxIou = 0
-                for m,score,label in zip(masks,scores,labels):
+                tp = 0
+                fp = 0
+                fn = 0
+                # f1 = 0
+                for m,score,label,cat_score in zip(masks,scores,labels,cat_scores):
 
 
                     o = np.sum(gt)
+                    # print(m)
                     x = (np.ravel(gt) & np.ravel(m))
                     i = np.sum(x)
                     iou = i/o
                     if iou>maxIou:
                         maxIou = iou
                     if iou >f1_threshold:
-                        if label == gt_label and score > f1_threshold:
+                        # print(gt_catgory,cat_score)
+                        tp = np.sum(np.ravel(gt_catgory ) & np.ravel(cat_score))
+                        fp = np.sum(~np.ravel(gt_catgory ) & np.ravel(cat_score))
+                        fn = np.sum(np.ravel(gt_catgory ) & ~np.ravel(cat_score))
+                        # print(tp,fp,fn)
+                        try:
+                            P = tp/(tp+fp)
+                            R = tp/(tp+fn)
+                            F1 = 2*R*P/(R+P)
+                        except:
+                            F1=0
+                        # print(F1)
+                        if label == gt_label and F1 > f1_threshold:
+                            
+
                             self.TP+=1
                         else:
                             self.FP+=1
@@ -56,4 +81,4 @@ class F1_scorer():
             F1 = 2*R*P/(R+P)
         except:
             F1=0
-        return F1
+        return F1,self.TP,self.FP,self.FN

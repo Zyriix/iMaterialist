@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 from maskrcnn_benchmark.modeling import registry
 from torch import nn
-
+import torch
 
 @registry.ROI_BOX_PREDICTOR.register("FastRCNNPredictor")
 class FastRCNNPredictor(nn.Module):
@@ -39,8 +39,12 @@ class FPNPredictor(nn.Module):
         num_categories = cfg.MODEL.ROI_BOX_HEAD.NUM_CATEGORIES
         representation_size = in_channels
 
-        self.cls_score = nn.Linear(representation_size, num_classes)
-        self.cat_score = nn.Linear(representation_size, num_categories)
+        self.cls_score = nn.Linear(representation_size, num_classes) 
+
+        # one predictor
+        self.cat_score = nn.Linear(representation_size+num_classes, num_categories)
+
+        # self.cat_score =[ nn.Linear(representation_size, num_categories)for _ in range(num_classes)]
         
         num_bbox_reg_classes = 2 if cfg.MODEL.CLS_AGNOSTIC_BBOX_REG else num_classes
         self.bbox_pred = nn.Linear(representation_size, num_bbox_reg_classes * 4)
@@ -48,15 +52,25 @@ class FPNPredictor(nn.Module):
         nn.init.normal_(self.cls_score.weight, std=0.01)
         nn.init.normal_(self.cat_score.weight, std=0.01)
         nn.init.normal_(self.bbox_pred.weight, std=0.001)
-        for l in [self.cls_score,self.cat_score, self.bbox_pred]:
+        for l in [self.cls_score, self.cat_score,self.bbox_pred]:
             nn.init.constant_(l.bias, 0)
+
+        # for x in self.cat_score:
+        #   nn.init.normal_(x.weight, std=0.01)
+        #   nn.init.constant_(x.bias, 0)
 
     def forward(self, x):
         if x.ndimension() == 4:
             assert list(x.shape[2:]) == [1, 1]
             x = x.view(x.size(0), -1)
         scores = self.cls_score(x)
-        cat_scores = self.cat_score(x)
+        # print(scores.shape,x.shape)
+
+        # labels = torch.max(scores,1)[1]
+        # cat_scores = self.cat_score[labels](x)
+
+        # one predictor
+        cat_scores = self.cat_score(torch.cat((x,scores),1))
         bbox_deltas = self.bbox_pred(x)
 
         return scores,cat_scores, bbox_deltas

@@ -82,7 +82,7 @@ def train(cfg, local_rank, distributed, use_tensorboard=False):
 
 
     # 每10000步进行一次验证
-    test_period = 20000
+    test_period = 20001
     # 
     if test_period > 0:
         # 切分训练集和验证集
@@ -174,7 +174,7 @@ def main():
     )
     parser.add_argument(
         "--config-file",
-        default="G:\OneDrive\code\python\maskrcnn-benchmark\configs\caffe2\e2e_mask_rcnn_X-152-32x8d-FPN-IN5k_1.44x_caffe2.yaml",
+        default="G:\OneDrive\code\python\maskrcnn-benchmark\configs\caffe2\e2e_mask_rcnn_R_50_FPN_1x_caffe2.yaml",
         metavar="FILE",
         help="path to config file",
         type=str,

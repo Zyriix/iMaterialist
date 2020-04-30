@@ -167,41 +167,7 @@ def do_train(
             #     output_folder=None,
             # )
             # synchronize()
-            model.eval()
-            scorer = F1_scorer()
-            # model.train=False
-            with torch.no_grad():
-                # Should be one image for each GPU:
-                
-                for iteration_val, (images_val, targets_val, _) in enumerate(tqdm(data_loader_val)):
-                    images_val = images_val.to(device)
-                    # targets_val = [target.to(device) for target in targets_val]
-                    result = model(images_val)
-                    """
-                    计算F1 Score
-                    """
-                    
-                    F1 = scorer(result,targets_val)
-   
-                    meters.update(F1score=F1)
-                    logger.info(
-                    meters.delimiter.join(
-                        [
-                            "[Validation]: ",
-                            "eta: {eta}",
-                            "iter: {iter}",
-                            "{meters}",
-                            "lr: {lr:.6f}",
-                            "max mem: {memory:.0f}",
-                        ]
-                    ).format(
-                        eta=eta_string,
-                        iter=iteration,
-                        meters=str(meters),
-                        lr=optimizer.param_groups[0]["lr"],
-                        memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
-                    )
-                )
+            do_val(model,data_loader_val,meters,device,logger,eta_string,optimizer.param_groups[0]["lr"])
             synchronize()
             
         model.train()
@@ -215,3 +181,41 @@ def do_train(
             total_time_str, total_training_time / (max_iter)
         )
     )
+
+def do_val(model,data_loader_val,meters,device,logger,eta_string,lr):
+    model.eval()
+    scorer = F1_scorer()
+    # model.train=False
+    with torch.no_grad():
+
+        for iteration_val, (images_val, targets_val, _) in enumerate(tqdm(data_loader_val)):
+            images_val = images_val.to(device)
+            # targets_val = [target.to(device) for target in targets_val]
+            result = model(images_val)
+            """
+            计算F1 Score
+            """
+            
+            F1,TP,FP,FN = scorer(result,targets_val)
+            if iteration_val%200==0:
+                print(f"TP:{TP},FP:{FP},FN:{FN}")
+
+            meters.update(F1score=F1)
+            logger.info(
+            meters.delimiter.join(
+                [
+                    "[Validation]: ",
+                    "eta: {eta}",
+                    "iter: {iter}",
+                    "{meters}",
+                    "lr: {lr:.6f}",
+                    "max mem: {memory:.0f}",
+                ]
+            ).format(
+                eta=eta_string,
+                iter=iteration_val,
+                meters=str(meters),
+                lr=lr,
+                memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
+            )
+        )

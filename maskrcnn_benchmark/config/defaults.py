@@ -40,13 +40,13 @@ _C.MODEL.WEIGHT = ""
 # -----------------------------------------------------------------------------
 _C.INPUT = CN()
 # Size of the smallest side of the image during training
-_C.INPUT.MIN_SIZE_TRAIN = (800,)  # (800,)
+_C.INPUT.MIN_SIZE_TRAIN = (600,1200)  # (800,)
 # Maximum size of the side of the image during training
-_C.INPUT.MAX_SIZE_TRAIN = 1333
+_C.INPUT.MAX_SIZE_TRAIN = 1900
 # Size of the smallest side of the image during testing
-_C.INPUT.MIN_SIZE_TEST = 800
+_C.INPUT.MIN_SIZE_TEST = 600
 # Maximum size of the side of the image during testing
-_C.INPUT.MAX_SIZE_TEST = 1333
+_C.INPUT.MAX_SIZE_TEST = 1900
 # Values to be used for image normalization
 _C.INPUT.PIXEL_MEAN = [102.9801, 115.9465, 122.7717]
 # Values to be used for image normalization
@@ -55,10 +55,10 @@ _C.INPUT.PIXEL_STD = [1., 1., 1.]
 _C.INPUT.TO_BGR255 = True
 
 # Image ColorJitter
-_C.INPUT.BRIGHTNESS = 0.0
-_C.INPUT.CONTRAST = 0.0
-_C.INPUT.SATURATION = 0.0
-_C.INPUT.HUE = 0.0
+_C.INPUT.BRIGHTNESS = 0.3
+_C.INPUT.CONTRAST = 0.3
+_C.INPUT.SATURATION = 0.1
+_C.INPUT.HUE = 0.1
 
 # Flips
 _C.INPUT.HORIZONTAL_FLIP_PROB_TRAIN = 0.5

@@ -170,13 +170,20 @@ class FastRCNNLossComputation(object):
         # print(cat_logits,torch.sum(categories))
 
         classification_loss = F.cross_entropy(class_logits, labels)
+        # test = F.cross_entropy(class_logits, labels)
+       
+        # classification_loss=torch.sum(classification_loss)/classification_loss.shape[0]
+        # print(classification_loss,test)
         # print(cat_logits.shape,categories.shape)
         # print(cat_logits,categories)
         # print(torch.sum(categories,axis=0))
         # categories_loss = self.sigmoid_focal_loss(cat_logits,categories.int())
         
-        categories_loss = F.binary_cross_entropy_with_logits(cat_logits,categories.float(),pos_weight=self.weight)
-        # print(categories_loss)
+        # categories_loss = F.binary_cross_entropy_with_logits(cat_logits,categories.float(),pos_weight=self.weight)
+        categories_loss = F.binary_cross_entropy_with_logits(cat_logits,categories.float(),reduction='none')
+        # cat_loss = F.binary_cross_entropy_with_logits(cat_logits,categories.float())
+        categories_loss=torch.sum(categories_loss)/categories.shape[0]
+        # print(classification_loss,categories_loss)
 
         # get indices that correspond to the regression targets for
         # the corresponding ground truth labels, to be used with

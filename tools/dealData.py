@@ -70,7 +70,7 @@ def get_pos_weight():
     rs = df['AttributesIds'].apply(check)
     rs = np.sum(rs,axis=0)
     count = df['AttributesIds'].shape[0]
-    rs= (2*count-rs)/rs
+    rs= (count-rs)/rs
     print(rs)
     f=open('../configs/pos_weight.json','w')
     json.dump(rs.tolist(),f)

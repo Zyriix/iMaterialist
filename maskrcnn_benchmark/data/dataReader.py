@@ -42,9 +42,11 @@ class FashionDataset(torch.utils.data.Dataset):
         for i,x in enumerate(self.attributes):
             self.id2idx[str(x['id'])]=i
         # 这是源码中定义的数据预处理
+        
         self.transforms = None  if not train and cfg.TEST.BBOX_AUG.ENABLED else build_transforms(cfg, train)
 
-        ## 读取我们生成的目录文件
+        ## 读取我们生成的目录
+        # 文件
         if train:
             f=open("G:\OneDrive\code\python\kaggle/fashion/train.json",'r')
             self.data=json.load(f)
@@ -118,31 +120,34 @@ class FashionDataset(torch.utils.data.Dataset):
         # img = Image.fromarray(img)
         ## 训练时生成mask，bbox以及label。并添加到boxlist对象的filed中
         if self.train:
-            if image['height']<800 or image['width']<800:
-                return self.__getitem__((idx+1)%self.__len__())
+            # if image['height']<800 or image['width']<800:
+            #     return self.__getitem__((idx+1)%self.__len__())
             masks,labels = self.load_mask(idx)
-            if 'bbox' not in image:
-              boxes = self.extract_bboxes(masks)
-              self.data[idx]['bbox'] = boxes
-            else:
-                boxes = image['bbox']
-            boxlist = BoxList(torch.Tensor(boxes), (image['width'],image['height']), mode="xyxy")
-            binMasks = SegmentationMask(torch.Tensor(masks).permute(2,0,1),(image['width'],image['height']),mode='mask')
-            # for cats in image['cat']:
-                # print(cats)
-            cat = [[self.id2idx[x]   for x in cats.split(',')  ]if type(cats)!=float else [] for cats in image['cat']]
-            # for cats in image['cat']:
-                # print(f"cats:{cats},{type(cats)}")
-            sub_cat = np.zeros((len(cat),self.cfg.MODEL.ROI_BOX_HEAD.NUM_CATEGORIES))
-            for i,c in enumerate(cat):
-                
-                sub_cat[i,c]=1
-                # print(f"sub_cat:{sub_cat[i,:]}")
-                # print(sub_cat.shape)
-            # print(cat)
-            boxlist.add_field('masks',binMasks)
-            boxlist.add_field('labels',torch.Tensor(labels))
-            boxlist.add_field('categories',torch.Tensor(sub_cat))
+            try:
+                if 'bbox' not in image:
+                    boxes = self.extract_bboxes(masks)
+                    self.data[idx]['bbox'] = boxes
+                else:
+                    boxes = image['bbox']
+                boxlist = BoxList(torch.Tensor(boxes), (image['width'],image['height']), mode="xyxy")
+                binMasks = SegmentationMask(torch.Tensor(masks).permute(2,0,1),(image['width'],image['height']),mode='mask')
+                # for cats in image['cat']:
+                    # print(cats)
+                cat = [[self.id2idx[x]   for x in cats.split(',')  ]if type(cats)!=float else [] for cats in image['cat']]
+                # for cats in image['cat']:
+                    # print(f"cats:{cats},{type(cats)}")
+                sub_cat = np.zeros((len(cat),self.cfg.MODEL.ROI_BOX_HEAD.NUM_CATEGORIES))
+                for i,c in enumerate(cat):
+                    
+                    sub_cat[i,c]=1
+                    # print(f"sub_cat:{sub_cat[i,:]}")
+                    # print(sub_cat.shape)
+                # print(cat)
+                boxlist.add_field('masks',binMasks)
+                boxlist.add_field('labels',torch.Tensor(labels))
+                boxlist.add_field('categories',torch.Tensor(sub_cat))
+            except:
+                return self.__getitem__((idx+1)%self.__len__())
         # 测试时由于数据中没有长和宽，手动生成一下
         else:
             self.data[idx]['width']=img.size[0]
@@ -158,7 +163,7 @@ class FashionDataset(torch.utils.data.Dataset):
         # boxlists = list()
         # boxlists.append(boxlist)
         if self.train:
-          return img, boxlist, idx
+          return img, boxlist, image['image_id']
         
         else: return img,image['image_id']
 
@@ -169,9 +174,21 @@ class FashionDataset(torch.utils.data.Dataset):
     # 获取图片的长和宽
     def get_img_info(self, idx):
         image = self.data[idx]
+        print(image['image_id'])
         if image['height']==None or image['width']==None:
-            img = cv2.imread(image['path'])
+            img = Image.open(image['path'])
             self.data[idx]['width']=img.size[0]
             self.data[idx]['height']=img.size[1]
 
         return {"height": self.data[idx]['height'], "width": self.data[idx]['width']}
+    def get_img_info_by_id(self, image_id):
+        for i,image in enumerate(self.data):
+            if image_id == image['image_id']:
+                # print(image['image_id'])
+                if image['height']==None or image['width']==None:
+                    img = img = Image.open(image['path'])
+                    self.data[i]['width']=img.size[0]
+                    self.data[i]['height']=img.size[1]
+
+                return (self.data[i]['height'], self.data[i]['width'])
+        return None
