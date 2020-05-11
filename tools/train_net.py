@@ -175,7 +175,7 @@ def main():
     )
     parser.add_argument(
         "--config-file",
-        default="G:\OneDrive\code\python\maskrcnn-benchmark\configs\caffe2\e2e_mask_rcnn_X-152-32x8d-FPN-IN5k_1.44x_caffe2.yaml",
+        default="../configs/caffe2/e2e_mask_rcnn_X-152-32x8d-FPN-IN5k_1.44x_caffe2.yaml",
         metavar="FILE",
         help="path to config file",
         type=str,
