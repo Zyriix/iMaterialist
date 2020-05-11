@@ -217,7 +217,7 @@ MODEL:
   RPN_ONLY: false
   WEIGHT: catalog://Caffe2Detectron/COCO/37129812/e2e_mask_rcnn_X-152-32x8d-FPN-IN5k_1.44x
 OUTPUT_DIR: ../model/
-PATHS_CATALOG: g:\onedrive\code\python\maskrcnn-benchmark\maskrcnn_benchmark\config\paths_catalog.py
+PATHS_CATALOG: /Users/zyriix/code/kaggle/iMaterialist/maskrcnn_benchmark/config/paths_catalog.py
 SOLVER:
   BASE_LR: 0.00125
   BIAS_LR_FACTOR: 1

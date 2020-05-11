@@ -35,10 +35,11 @@ class FastRCNNLossComputation(object):
             box_coder (BoxCoder)
         """
         f= open('../configs/pos_weight.json','r')
-        self.weight = torch.Tensor(json.load(f)).cuda()
+        self.weight = torch.Tensor(json.load(f)).to(device)
         self.proposal_matcher = proposal_matcher
         self.fg_bg_sampler = fg_bg_sampler
         self.box_coder = box_coder
+        
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
         self.sigmoid_focal_loss = SigmoidFocalLoss(0,0.5)
         self.ATTRIBUTES_ON = cfg.MODEL.ROI_BOX_HEAD.ATTIBUTES_ON
