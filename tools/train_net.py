@@ -53,14 +53,15 @@ def train(cfg, local_rank, distributed, use_tensorboard=False):
         model = torch.nn.parallel.DistributedDataParallel(
             model, device_ids=[local_rank], output_device=local_rank,
             # this should be removed if we update BatchNorm stats
-            broadcast_buffers=False,
+            broadcast_buffers=False
         )
 
     arguments = {}
     arguments["iteration"] = 0
 #
     # output_dir = cfg.OUTPUT_DIR+ time.strftime('%Y-%m-%d',time.localtime(time.time()))
-    output_dir = cfg.OUTPUT_DIR+ time.strftime('%Y-%m-%d',time.localtime(time.time()))
+    output_dir = cfg.OUTPUT_DIR+ time.strftime('%Y-%m-07',time.localtime(time.time()))
+    print(output_dir)
     save_to_disk = get_rank() == 0
     checkpointer = DetectronCheckpointer(
         cfg, model, optimizer, scheduler, output_dir, save_to_disk
@@ -82,11 +83,11 @@ def train(cfg, local_rank, distributed, use_tensorboard=False):
 
 
     # 每10000步进行一次验证
-    test_period = 20001
+    test_period = 25000
     # 
     if test_period > 0:
         # 切分训练集和验证集
-        datasets= torch.utils.data.random_split(dataset,[40000,len(dataset)-40000])
+        datasets= torch.utils.data.random_split(dataset,[45000,len(dataset)-45000])
         train_dataset = datasets[0]
         val_dataset = datasets[1]
         data_loader=makeFashionDataLoader(cfg,train_dataset)
@@ -174,7 +175,7 @@ def main():
     )
     parser.add_argument(
         "--config-file",
-        default="G:\OneDrive\code\python\maskrcnn-benchmark\configs\caffe2\e2e_mask_rcnn_R_50_FPN_1x_caffe2.yaml",
+        default="G:\OneDrive\code\python\maskrcnn-benchmark\configs\caffe2\e2e_mask_rcnn_X-152-32x8d-FPN-IN5k_1.44x_caffe2.yaml",
         metavar="FILE",
         help="path to config file",
         type=str,

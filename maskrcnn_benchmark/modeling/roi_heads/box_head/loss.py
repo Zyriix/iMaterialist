@@ -22,6 +22,7 @@ class FastRCNNLossComputation(object):
 
     def __init__(
         self,
+        cfg,
         proposal_matcher,
         fg_bg_sampler,
         box_coder,
@@ -39,13 +40,16 @@ class FastRCNNLossComputation(object):
         self.fg_bg_sampler = fg_bg_sampler
         self.box_coder = box_coder
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
-        self.sigmoid_focal_loss = SigmoidFocalLoss(2,0.5)
+        self.sigmoid_focal_loss = SigmoidFocalLoss(0,0.5)
+        self.ATTRIBUTES_ON = cfg.MODEL.ROI_BOX_HEAD.ATTIBUTES_ON
+        
 
     def match_targets_to_proposals(self, proposal, target):
         # print(f"before match,{target.get_field('categories').shape}")
         match_quality_matrix = boxlist_iou(target, proposal)
         matched_idxs = self.proposal_matcher(match_quality_matrix)
         # Fast RCNN only need "labels" field for selecting the targets
+        # TODO: 检查维度是否一致
         target = target.copy_with_fields(["labels","categories"])
         # target = target.copy_with_fields()
         # get the targets corresponding GT for each proposal
@@ -64,6 +68,7 @@ class FastRCNNLossComputation(object):
         labels = []
         regression_targets = []
         categories  = []
+        
         for proposals_per_image, targets_per_image in zip(proposals, targets):
             matched_targets = self.match_targets_to_proposals(
                 proposals_per_image, targets_per_image
@@ -72,21 +77,20 @@ class FastRCNNLossComputation(object):
 
             labels_per_image = matched_targets.get_field("labels")
             labels_per_image = labels_per_image.to(dtype=torch.int64)
+            
+                # print(cats_per_image.shape)
 
-            cats_per_image = matched_targets.get_field("categories")
-            # print(cats_per_image.shape)
-            cats_per_image = cats_per_image.to(dtype=torch.int64)
-            # print(cats_per_image.shape)
+            
 
             # Label background (below the low threshold)
             bg_inds = matched_idxs == Matcher.BELOW_LOW_THRESHOLD
             labels_per_image[bg_inds] = 0
-            cats_per_image[bg_inds] = torch.Tensor(np.zeros(294)).cuda().long()
+            
 
             # Label ignore proposals (between low and high thresholds)
             ignore_inds = matched_idxs == Matcher.BETWEEN_THRESHOLDS
             labels_per_image[ignore_inds] = -1  # -1 is ignored by sampler
-            cats_per_image[ignore_inds] = -1
+            
 
             # compute regression targets
             regression_targets_per_image = self.box_coder.encode(
@@ -94,8 +98,17 @@ class FastRCNNLossComputation(object):
             )
 
             labels.append(labels_per_image)
-            categories.append(cats_per_image)
             regression_targets.append(regression_targets_per_image)
+
+            
+                
+            cats_per_image = matched_targets.get_field("categories")
+            # print(cats_per_image.shape)
+            cats_per_image = cats_per_image.to(dtype=torch.int64)
+            cats_per_image[bg_inds] = torch.Tensor(np.zeros(294)).cuda().long()
+            cats_per_image[ignore_inds] = -1
+            
+            categories.append(cats_per_image)
 
         return labels,categories, regression_targets
 
@@ -120,7 +133,8 @@ class FastRCNNLossComputation(object):
         ):
             # print(f"before subsample:{cat_per_image.shape}")
             proposals_per_image.add_field("labels", labels_per_image)
-            proposals_per_image.add_field("categories", cat_per_image)
+            if self.ATTRIBUTES_ON:
+                proposals_per_image.add_field("categories", cat_per_image)
             proposals_per_image.add_field(
                 "regression_targets", regression_targets_per_image
             )
@@ -135,6 +149,7 @@ class FastRCNNLossComputation(object):
             proposals[img_idx] = proposals_per_image
 
         self._proposals = proposals
+        
         return proposals
 
     def __call__(self, class_logits, cat_logits,box_regression):
@@ -163,13 +178,13 @@ class FastRCNNLossComputation(object):
         proposals = self._proposals
 
         labels = cat([proposal.get_field("labels") for proposal in proposals], dim=0)
-        categories = cat([proposal.get_field("categories") for proposal in proposals], dim=0)
+        
         regression_targets = cat(
             [proposal.get_field("regression_targets") for proposal in proposals], dim=0
         )
         # print(cat_logits,torch.sum(categories))
 
-        classification_loss = F.cross_entropy(class_logits, labels)
+        classification_loss = F.cross_entropy(class_logits, labels)*2
         # test = F.cross_entropy(class_logits, labels)
        
         # classification_loss=torch.sum(classification_loss)/classification_loss.shape[0]
@@ -180,10 +195,35 @@ class FastRCNNLossComputation(object):
         # categories_loss = self.sigmoid_focal_loss(cat_logits,categories.int())
         
         # categories_loss = F.binary_cross_entropy_with_logits(cat_logits,categories.float(),pos_weight=self.weight)
-        categories_loss = F.binary_cross_entropy_with_logits(cat_logits,categories.float(),reduction='none')
+        categories_loss=0
+        if self.ATTRIBUTES_ON:
+            # print(labels.shape)
+
+            """
+            new version's loss computation, with categories's shape [batch,num_categories*num_classes]
+            """
+            positive_inds = torch.nonzero(labels > 0).squeeze(1)
+            labels_pos = labels[positive_inds]
+            categories = cat([proposal.get_field("categories") for proposal in proposals], dim=0)[positive_inds]
+            # print()
+            # indices = np.zeros(294*47)
+            # indices[(labels_pos*294).int():((labels_pos+1)*294).int()]=1
+            cat_logits_pos = torch.zeros_like(categories).float()
+            for i,(indx,label) in enumerate(zip(positive_inds,labels_pos)):
+                cat_logits_pos[i]=(cat_logits[indx,label*294:(label+1)*294])
+                # print(cat_logits_pos)
+            
+            categories_loss = F.binary_cross_entropy_with_logits(cat_logits_pos,categories.float())*10
+            # focal_loss = self.sigmoid_focal_loss(cat_logits_pos,categories.float())
+            # print(focal_loss)
+            
+            """
+            old version's loss computation, with categories's shape [batch,num_categories]
+            """
+            # categories_loss = F.binary_cross_entropy_with_logits(cat_logits,categories.float(),reduction='none')
         # cat_loss = F.binary_cross_entropy_with_logits(cat_logits,categories.float())
-        categories_loss=torch.sum(categories_loss)/categories.shape[0]
-        # print(classification_loss,categories_loss)
+            # categories_loss=torch.sum(categories_loss)/labels_pos.numel()/2
+            # print(classification_loss,categories_loss)
 
         # get indices that correspond to the regression targets for
         # the corresponding ground truth labels, to be used with
@@ -224,6 +264,7 @@ def make_roi_box_loss_evaluator(cfg):
     cls_agnostic_bbox_reg = cfg.MODEL.CLS_AGNOSTIC_BBOX_REG
 
     loss_evaluator = FastRCNNLossComputation(
+        cfg,
         matcher,
         fg_bg_sampler, 
         box_coder,

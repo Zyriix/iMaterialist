@@ -29,7 +29,7 @@ def main():
     parser = argparse.ArgumentParser(description="PyTorch Object Detection Inference")
     parser.add_argument(
         "--config-file",
-        default="G:\OneDrive\code\python\maskrcnn-benchmark\configs\caffe2\e2e_mask_rcnn_R_50_FPN_1x_caffe2.yaml",
+        default="G:\OneDrive\code\python\maskrcnn-benchmark\configs\caffe2\e2e_mask_rcnn_X-152-32x8d-FPN-IN5k_1.44x_caffe2.yaml",
         metavar="FILE",
         help="path to config file",
     )
@@ -91,7 +91,7 @@ def main():
     output_dir = cfg.OUTPUT_DIR
     checkpointer = DetectronCheckpointer(cfg, model, save_dir=output_dir)
     ckpt = cfg.MODEL.WEIGHT if args.ckpt is None else args.ckpt
-    _ = checkpointer.load("G:/model_0042500.pth", use_latest=False)
+    _ = checkpointer.load("G:/model_057500.pth", use_latest=False)
 
     iou_types = ("bbox",)
     if cfg.MODEL.MASK_ON:
@@ -110,7 +110,7 @@ def main():
     
     ## 自定义的数据集，batch_size必须设为1
     ## output_folder为输出结果的目录 'G:\OneDrive\code\python\kaggle/fashion/inferences'
-    output_folder = os.path.join(args.output_folder,time.strftime('%Y-%m-26',time.localtime(time.time())))
+    output_folder = os.path.join(args.output_folder,time.strftime('%Y-%m-%d',time.localtime(time.time())))
     if not os.path.exists(output_folder):
         os.mkdir(output_folder)
     dataset = FashionDataset(cfg,train=False)

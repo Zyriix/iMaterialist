@@ -7,7 +7,7 @@ from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.boxlist_ops import boxlist_nms
 from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
-
+# import
 
 class PostProcessor(nn.Module):
     """
@@ -18,6 +18,7 @@ class PostProcessor(nn.Module):
 
     def __init__(
         self,
+        cfg,
         score_thresh=0.05,
         nms=0.5,
         detections_per_img=100,
@@ -38,6 +39,7 @@ class PostProcessor(nn.Module):
         self.detections_per_img = detections_per_img
         if box_coder is None:
             box_coder = BoxCoder(weights=(10., 10., 5., 5.))
+        self.ATTIBUTES_ON = cfg.MODEL.ROI_BOX_HEAD.ATTIBUTES_ON
         self.box_coder = box_coder
         self.cls_agnostic_bbox_reg = cls_agnostic_bbox_reg
         self.bbox_aug_enabled = bbox_aug_enabled
@@ -57,7 +59,7 @@ class PostProcessor(nn.Module):
         class_logits, cat_logits, box_regression = x
         class_prob = F.softmax(class_logits, -1)
         # print(f"logits:{cat_logits}")
-        cat_prob = torch.sigmoid(cat_logits)
+        
         # print(cat_prob)
         # TODO think about a representation of batch of boxes
         image_shapes = [box.size for box in boxes]
@@ -71,17 +73,24 @@ class PostProcessor(nn.Module):
         )
         if self.cls_agnostic_bbox_reg:
             proposals = proposals.repeat(1, class_prob.shape[1])
-
+ 
         num_classes = class_prob.shape[1]
 
         proposals = proposals.split(boxes_per_image, dim=0)
         class_prob = class_prob.split(boxes_per_image, dim=0)
-        cat_prob = cat_prob.split(boxes_per_image, dim=0)
+        if self.ATTIBUTES_ON:
+            cat_prob = torch.sigmoid(cat_logits)
+            cat_prob = cat_prob.split(boxes_per_image, dim=0)
+        else:
+            cat_prob= [0 for i in range(len(class_prob))]
+        
+        
 
         results = []
         for prob, c_prob,boxes_per_img, image_shape in zip(
             class_prob,cat_prob, proposals, image_shapes
         ):
+        
             boxlist = self.prepare_boxlist(boxes_per_img, prob,c_prob, image_shape)
             boxlist = boxlist.clip_to_image(remove_empty=False)
             if not self.bbox_aug_enabled:  # If bbox aug is enabled, we will do it later
@@ -107,7 +116,8 @@ class PostProcessor(nn.Module):
         # cat_scores = cat_scores.reshape(-1)
         boxlist = BoxList(boxes, image_shape, mode="xyxy")
         boxlist.add_field("scores", scores)
-        boxlist.add_field("cat_scores",cat_scores)
+        if self.ATTIBUTES_ON:
+            boxlist.add_field("cat_scores",cat_scores)
         return boxlist
 
     def filter_results(self, boxlist, num_classes):
@@ -118,7 +128,8 @@ class PostProcessor(nn.Module):
         # if we had multi-class NMS, we could perform this directly on the boxlist
         boxes = boxlist.bbox.reshape(-1, num_classes * 4)
         scores = boxlist.get_field("scores").reshape(-1, num_classes)
-        cat_scores = boxlist.get_field("cat_scores")
+        if self.ATTIBUTES_ON:
+            cat_scores = boxlist.get_field("cat_scores")
         result = []
         # Apply threshold on detection probabilities and apply NMS
         # Skip j = 0, because it's the background class
@@ -128,10 +139,20 @@ class PostProcessor(nn.Module):
             scores_j = scores[inds, j]
             boxes_j = boxes[inds, j * 4 : (j + 1) * 4]
             # print(cat_scores.shape)
-            cat_scores_inds = cat_scores[inds,:]
+           
             boxlist_for_class = BoxList(boxes_j, boxlist.size, mode="xyxy")
             boxlist_for_class.add_field("scores", scores_j)
-            boxlist_for_class.add_field("cat_scores", cat_scores_inds)
+            if self.ATTIBUTES_ON:
+                """
+                new version
+                """
+                cat_scores_inds = cat_scores[inds,j*294:(j+1)*294]
+
+                """
+                old version
+                """
+                # cat_scores_inds = cat_scores[inds,:]
+                boxlist_for_class.add_field("cat_scores", cat_scores_inds)
             boxlist_for_class = boxlist_nms(
                 boxlist_for_class, self.nms
             )
@@ -169,6 +190,7 @@ def make_roi_box_post_processor(cfg):
     bbox_aug_enabled = cfg.TEST.BBOX_AUG.ENABLED
 
     postprocessor = PostProcessor(
+        cfg,
         score_thresh,
         nms_thresh,
         detections_per_img,

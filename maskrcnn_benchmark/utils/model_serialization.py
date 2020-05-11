@@ -47,11 +47,11 @@ def align_and_update_state_dicts(model_state_dict, loaded_state_dict):
             continue
         key = current_keys[idx_new]
         # print(key)
-        if key.split('.')[-3] == 'predictor' :
+        # if key.split('.')[-3] == 'predictor' :
             # if key.split('.')[-1]=="weight":
         #     #     torch.nn.init.normal_(model_state_dict[key], mean=0, std=0.01)
-            continue
-         
+            # continue
+        #  
         key_old = loaded_keys[idx_old]
         
         model_state_dict[key] = loaded_state_dict[key_old]

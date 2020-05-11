@@ -249,7 +249,7 @@ class visualize_tools():
     def run_on_inference_result(self):
        
         # 这是inference的结果，里面保存了{imageId:predictions}的结果
-        predictions = torch.load( os.path.join('G:\OneDrive\code\python\kaggle/fashion/inferences/2020-04-29', "predictions.pth"))
+        predictions = torch.load( os.path.join('G:\OneDrive\code\python\kaggle/fashion/inferences/2020-05-10', "predictions.pth"))
         
         # print(predictions)
         for i,key in enumerate(predictions):
@@ -272,11 +272,11 @@ class visualize_tools():
         # cfg.merge_from_list(args.opts)
                 cfg.freeze()
                 # 按照配置中对原始图片进行缩放
-                print(cfg.INPUT.MIN_SIZE_TEST,cfg.INPUT.MAX_SIZE_TEST)
+                #print(cfg.INPUT.MIN_SIZE_TEST,cfg.INPUT.MAX_SIZE_TEST)
                 resizer = Resize(cfg.INPUT.MIN_SIZE_TEST,cfg.INPUT.MAX_SIZE_TEST)
-                print(image.size)
+                #print(image.size)
                 image = np.array(resizer(image))
-                print(image.shape)
+                #print(image.shape)
                 # if maxLen>cfg.INPUT.MAX_SIZE_TEST:
                 #     sc = cfg.INPUT.MAX_SIZE_TEST/maxLen
                 # elif minLen<cfg.INPUT.MIN_SIZE_TEST:
@@ -300,9 +300,9 @@ class visualize_tools():
                 image = self.overlay_mask(image, pre)
 
                 # 将类别添加到图片中
-                # image = self.overlay_class_names(image, pre)
+                image = self.overlay_class_names(image, pre)
 
-                image = self.overlay_categories(image, pre)
+               # image = self.overlay_categories(image, pre)
 
                 # 绘制图片
                 image = cv2.cvtColor(image,cv2.COLOR_RGB2BGR)
@@ -408,7 +408,7 @@ class visualize_tools():
         idx2id = dict()
         for i,x in enumerate(self.attributes):
             idx2id[i]=str(x['id'])
-        predictions = torch.load( os.path.join('G:\OneDrive\code\python\kaggle/fashion/inferences/2020-04-28', "predictions.pth"))
+        predictions = torch.load( os.path.join('G:\OneDrive\code\python\kaggle/fashion/inferences/2020-05-02', "predictions.pth"))
         df = pd.DataFrame(columns=('ImageId', 'EncodedPixels', 'ClassId','AttributesIds'))
         cnt=0
         # print(len(predictions))
@@ -443,61 +443,23 @@ class visualize_tools():
             cats =[[ str(idx2id[i[0]]) for i in np.argwhere(cat==True)]  for cat in idx]
             labels = pre.get_field("labels").tolist()
             masks = pre.get_field("mask").float()
-            # masks=masks.reshape(masks.shape[0],masks.shape[2],masks.shape[3])
-            # print(masks.shape,len(cats),len(labels))
-            
-            # for i,mask in enumerate(masks):
-            #     mask = mask.astype('uint8')
-            #     mask = mask.reshape(mask.shape[0],mask.shape[1])
-            #     # if key=="5c2ae75ce5ed6f916a8dde9cf5ca620f":
-            #     #     print(mask.shape,np.sum(mask))
-            #     maxSize = max(mask.shape[0],mask.shape[1])
-            #     # print(mask.shape)
-                
-            #     # ratio = 1024/maxSize
-            #     # h = mask.shape[0]*ratio
-            #     # w = mask.shape[1]*ratio
-            #     # print(mask.shape)
-            #     # print(h,w,int(h),int(w))
-                
-            #     pil_image = Image.fromarray(mask)
-            #     # pil_image = pil_image.resize((w,h), Image.NEAREST)
-            #     # resized_binary_mask = np.asarray(pil_image)
-            #     # mask=resized_binary_mask
-            #     # if key=="5c2ae75ce5ed6f916a8dde9cf5ca620f":
-            #     #     print(mask.shape,np.sum(mask),'\n')
-            #     # print(key,mask.shape,'\n')
-            #     # if resized_binary_mask.shape[0]>1024 or resized_binary_mask.shape[1]>1024:
-            #     #     print(key,resized_binary_mask.shape,'\n')
-
-                
-            #     # print(mask.shape)
-            #     # if mask.shape[0]>1024 or mask.shape[1]>1024:
-            #     resizer = Resize(1023,1023)
-            #     resized_binary_mask = np.array(resizer(pil_image))
-            #         # mask=resized_binary_mask
-            #     # print(resized_binary_mask.shape)
-            #     masks_resized.append(resized_binary_mask)
-            #     #     print(resized_binary_mask.shape)
-            #     if resized_binary_mask.shape[0]>1024 or resized_binary_mask.shape[1]>1024 :
-            #             print(key,resized_binary_mask.shape)
-            #     # masks_resized.append(resized_binary_mask)
+         
             masks_resized=[]
             # print(masks.shape)
             for j, m in enumerate(masks):
                 # print(m.shape)
                 res = transforms.ToPILImage()(m.permute(1, 2, 0).cpu().numpy())
                 # print(res.size)
-                maxSize = max(res.size)
+                #maxSize = max(res.size)
                 maxSize_org = max(h,w)
-                ratio = 1024/maxSize
+               # ratio = 1024/maxSize
                 ratio_org = 1024/maxSize_org
-                newW = int(res.size[0]*ratio)
-                newH = int(res.size[1]*ratio)
+               # newW = int(res.size[0]*ratio)
+               # newH = int(res.size[1]*ratio)
                 newW_org = int(w*ratio_org)
                 newH_org = int(h*ratio_org)
-                if newW!=newW_org or newH!=newH_org:
-                    print(newW,newH,newW_org,newH_org)
+              #  if newW!=newW_org or newH!=newH_org:
+             #       print(newW,newH,newW_org,newH_org)
                 res = np.asarray(res.resize((newW_org, newH_org), resample=Image.BILINEAR))
                 # print(res.shape)
                 masks_resized.append((res[:, :] * 255. > 127).astype(np.uint8))
@@ -546,8 +508,8 @@ class visualize_tools():
                 cnt+=1
                 # print(df)
         # df.reset_index(drop=True)
-        # print(df)
-        rsDir = ('G:\OneDrive\code\python\maskrcnn-benchmark/result/'+time.strftime('%Y-%m-%d',time.localtime(time.time())))
+        # print(df)e
+        rsDir = 'G:\OneDrive\code\python\maskrcnn-benchmark/result/'+time.strftime('%Y-%m-%d',time.localtime(time.time()))
         if not os.path.exists(rsDir):
             os.makedirs(rsDir)
         # print(df['ImageId'].value_counts())
@@ -626,6 +588,6 @@ class visualize_tools():
 
 
 vt = visualize_tools()
-# vt.run_on_inference_result()
+#vt.run_on_inference_result()
 # vt.run_on_train_set()
-vt.generate_submission_csv()
+vt.generate_submission_csv() 

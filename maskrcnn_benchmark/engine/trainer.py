@@ -61,6 +61,7 @@ def do_train(
     
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
     logger.info("Start training")
+    maxF1=0
     # meters = MetricLogger(delimiter="  ")
     max_iter = len(data_loader)
     start_iter = arguments["iteration"]
@@ -74,8 +75,10 @@ def do_train(
     if cfg.MODEL.KEYPOINT_ON:
         iou_types = iou_types + ("keypoints",)
     dataset_names = cfg.DATASETS.TEST
+    epochs = 2
+    for epoch in range(epochs):
 
-    for iteration, (images, targets, _) in tqdm(enumerate(data_loader, start_iter),desc="Training process"):
+      for iteration, (images, targets, _) in tqdm(enumerate(data_loader, start_iter),desc="Training process"):
         
         if any(len(target) < 1 for target in targets):
             logger.error(f"Iteration={iteration + 1} || Image Ids used for training {_} || targets Length={[len(target) for target in targets]}" )
@@ -167,10 +170,15 @@ def do_train(
             #     output_folder=None,
             # )
             # synchronize()
-            do_val(model,data_loader_val,meters,device,logger,eta_string,optimizer.param_groups[0]["lr"])
+            f1= do_val(model,data_loader_val,meters,device,logger,eta_string,optimizer.param_groups[0]["lr"])
+            if f1>maxF1:
+                maxF1=f1
+                checkpointer.save("model_best", **arguments)
             synchronize()
             
         model.train()
+        
+
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)
 
@@ -184,7 +192,7 @@ def do_train(
 
 def do_val(model,data_loader_val,meters,device,logger,eta_string,lr):
     model.eval()
-    scorer = F1_scorer()
+    scorer = F1_scorer(True)
     # model.train=False
     with torch.no_grad():
 
@@ -196,9 +204,10 @@ def do_val(model,data_loader_val,meters,device,logger,eta_string,lr):
             计算F1 Score
             """
             
-            F1,TP,FP,FN = scorer(result,targets_val)
-            if iteration_val%200==0:
+            F1,TP,FP,FN ,FP_ATT,FP_LABEL= scorer(result,targets_val)
+            if iteration_val%50==0:
                 print(f"TP:{TP},FP:{FP},FN:{FN}")
+                print(f"FP_ATT:{FP_ATT},FP_LABEL:{FP_LABEL}")
 
             meters.update(F1score=F1)
             logger.info(
@@ -219,3 +228,4 @@ def do_val(model,data_loader_val,meters,device,logger,eta_string,lr):
                 memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
             )
         )
+    return F1

@@ -38,11 +38,14 @@ class FPNPredictor(nn.Module):
         num_classes = cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES
         num_categories = cfg.MODEL.ROI_BOX_HEAD.NUM_CATEGORIES
         representation_size = in_channels
+        self.ATTIBUTES_ON = cfg.MODEL.ROI_BOX_HEAD.ATTIBUTES_ON
+        
+        
 
         self.cls_score = nn.Linear(representation_size, num_classes) 
 
         # one predictor
-        self.cat_score = nn.Linear(representation_size+num_classes, num_categories)
+        
 
         # self.cat_score =[ nn.Linear(representation_size, num_categories)for _ in range(num_classes)]
         
@@ -50,10 +53,19 @@ class FPNPredictor(nn.Module):
         self.bbox_pred = nn.Linear(representation_size, num_bbox_reg_classes * 4)
 
         nn.init.normal_(self.cls_score.weight, std=0.01)
-        nn.init.normal_(self.cat_score.weight, std=0.01)
         nn.init.normal_(self.bbox_pred.weight, std=0.001)
-        for l in [self.cls_score, self.cat_score,self.bbox_pred]:
+        for l in [self.cls_score,self.bbox_pred]:
             nn.init.constant_(l.bias, 0)
+
+        if self.ATTIBUTES_ON:
+            self.cat_score=nn.Linear(representation_size, num_categories*num_classes)
+            """old version"""
+            # self.cat_score=nn.Linear(representation_size+num_classes, num_categories)
+            nn.init.normal_(self.cat_score.weight, std=0.01)
+            nn.init.constant_(self.cat_score.bias, 0)
+            
+            
+            
 
         # for x in self.cat_score:
         #   nn.init.normal_(x.weight, std=0.01)
@@ -66,11 +78,15 @@ class FPNPredictor(nn.Module):
         scores = self.cls_score(x)
         # print(scores.shape,x.shape)
 
-        # labels = torch.max(scores,1)[1]
-        # cat_scores = self.cat_score[labels](x)
-
+        
         # one predictor
-        cat_scores = self.cat_score(torch.cat((x,scores),1))
+        cat_scores = None
+        if self.ATTIBUTES_ON:
+            # labels = torch.max(scores,1)[1]
+            cat_scores = self.cat_score(x)
+            """old version"""
+            # cat_scores = self.cat_score(torch.cat((x,scores),1))
+
         bbox_deltas = self.bbox_pred(x)
 
         return scores,cat_scores, bbox_deltas

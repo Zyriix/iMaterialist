@@ -40,13 +40,13 @@ _C.MODEL.WEIGHT = ""
 # -----------------------------------------------------------------------------
 _C.INPUT = CN()
 # Size of the smallest side of the image during training
-_C.INPUT.MIN_SIZE_TRAIN = (600,1200)  # (800,)
+_C.INPUT.MIN_SIZE_TRAIN = (800,)  # (800,)
 # Maximum size of the side of the image during training
-_C.INPUT.MAX_SIZE_TRAIN = 1900
+_C.INPUT.MAX_SIZE_TRAIN = 1333
 # Size of the smallest side of the image during testing
-_C.INPUT.MIN_SIZE_TEST = 600
+_C.INPUT.MIN_SIZE_TEST = 800
 # Maximum size of the side of the image during testing
-_C.INPUT.MAX_SIZE_TEST = 1900
+_C.INPUT.MAX_SIZE_TEST = 1333
 # Values to be used for image normalization
 _C.INPUT.PIXEL_MEAN = [102.9801, 115.9465, 122.7717]
 # Values to be used for image normalization
@@ -100,7 +100,7 @@ _C.MODEL.BACKBONE = CN()
 _C.MODEL.BACKBONE.CONV_BODY = "R-50-C4"
 
 # Add StopGrad at a specified stage so the bottom layers are frozen
-_C.MODEL.BACKBONE.FREEZE_CONV_BODY_AT = 2
+_C.MODEL.BACKBONE.FREEZE_CONV_BODY_AT = 3
 
 
 # ---------------------------------------------------------------------------- #
@@ -216,6 +216,7 @@ _C.MODEL.ROI_BOX_HEAD.POOLER_SAMPLING_RATIO = 0
 _C.MODEL.ROI_BOX_HEAD.POOLER_SCALES = (1.0 / 16,)
 _C.MODEL.ROI_BOX_HEAD.NUM_CLASSES = 47
 _C.MODEL.ROI_BOX_HEAD.NUM_CATEGORIES = 294
+_C.MODEL.ROI_BOX_HEAD.ATTIBUTES_ON = True
 # Hidden layer dimension when using an MLP for the RoI box head
 _C.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM = 1024
 # GN
@@ -392,21 +393,21 @@ _C.MODEL.FBNET.RPN_BN_TYPE = ""
 # Solver
 # ---------------------------------------------------------------------------- #
 _C.SOLVER = CN()
-_C.SOLVER.MAX_ITER = 40000
+_C.SOLVER.MAX_ITER = 120000
 
-_C.SOLVER.BASE_LR = 0.001
-_C.SOLVER.BIAS_LR_FACTOR = 2
+_C.SOLVER.BASE_LR = 0.00125
+_C.SOLVER.BIAS_LR_FACTOR = 1
 
 _C.SOLVER.MOMENTUM = 0.9
 
-_C.SOLVER.WEIGHT_DECAY = 0.0005
+_C.SOLVER.WEIGHT_DECAY = 0.0001
 _C.SOLVER.WEIGHT_DECAY_BIAS = 0
 
 _C.SOLVER.GAMMA = 0.1
-_C.SOLVER.STEPS = (30000,)
+_C.SOLVER.STEPS = [ 60000, 100000]
 
 _C.SOLVER.WARMUP_FACTOR = 1.0 / 3
-_C.SOLVER.WARMUP_ITERS = 500
+_C.SOLVER.WARMUP_ITERS = 0
 _C.SOLVER.WARMUP_METHOD = "linear"
 
 _C.SOLVER.CHECKPOINT_PERIOD = 2500
@@ -415,7 +416,8 @@ _C.SOLVER.TEST_PERIOD = 0
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
-_C.SOLVER.IMS_PER_BATCH = 16
+_C.SOLVER.IMS_PER_BATCH = 1
+
 
 # ---------------------------------------------------------------------------- #
 # Specific test options
@@ -426,7 +428,7 @@ _C.TEST.EXPECTED_RESULTS_SIGMA_TOL = 4
 # Number of images per batch
 # This is global, so if we have 8 GPUs and IMS_PER_BATCH = 16, each GPU will
 # see 2 images per batch
-_C.TEST.IMS_PER_BATCH = 8
+_C.TEST.IMS_PER_BATCH = 1
 # Number of detections per image
 _C.TEST.DETECTIONS_PER_IMG = 100
 
